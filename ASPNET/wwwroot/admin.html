@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Admin Dashboard Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #0b0f19; color: #f8fafc; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        }
+        .nav-item.active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-right: 3px solid #3b82f6; border-radius: 8px 0 0 8px;}
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        /* Animations */
+        .page-fade { animation: pageFade 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes pageFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-screen w-full flex overflow-hidden selection:bg-blue-500/30">
+    <!-- Blurred Orbs Background -->
+    <div class="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-700/20 blur-[150px] pointer-events-none"></div>
+    <div class="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-700/20 blur-[150px] pointer-events-none"></div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 glass-panel border-r border-white/10 z-20 flex flex-col">
+        <div class="p-6 flex items-center gap-3 border-b border-white/5">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 text-white font-bold text-xl"> E </div>
+            <span class="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">DashUI Pro</span>
+        </div>
+        <div class="flex-1 overflow-y-auto py-6 flex flex-col gap-2 pl-4">
+            <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-item active px-4 py-3 flex items-center gap-3 text-slate-400 hover:text-white transition-all font-medium text-sm text-left">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Tổng Quan
+            </button>
+            <button onclick="navigate('products')" id="nav-products" class="nav-item px-4 py-3 flex items-center gap-3 text-slate-400 hover:text-white transition-all font-medium text-sm text-left">
+                <i data-lucide="package" class="w-5 h-5"></i> Sản Phẩm
+            </button>
+            <button onclick="navigate('users')" id="nav-users" class="nav-item px-4 py-3 flex items-center gap-3 text-slate-400 hover:text-white transition-all font-medium text-sm text-left">
+                <i data-lucide="users" class="w-5 h-5"></i> Khách Hàng
+            </button>
+            <button onclick="navigate('settings')" id="nav-settings" class="nav-item px-4 py-3 flex items-center gap-3 text-slate-400 hover:text-white transition-all font-medium text-sm text-left">
+                <i data-lucide="settings" class="w-5 h-5"></i> Cấu hình
+            </button>
+            <div class="mt-auto mb-4 px-2">
+                <button onclick="logout()" class="w-full px-4 py-2 flex items-center justify-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-all font-medium text-sm">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> Đăng Xuất
+                </button>
+            </div>
+        </div>
+        <div class="p-4 border-t border-white/5">
+            <div class="flex items-center gap-3 px-3 py-2">
+                <div class="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-tr from-blue-600 to-blue-400 text-white font-bold shadow-lg shadow-blue-500/30">AD</div>
+                <div>
+                    <h4 class="text-sm font-semibold">Chủ Cửa Hàng</h4>
+                    <p class="text-xs text-emerald-400">Admin Toàn Quyền</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="flex-1 flex flex-col relative z-10 w-full overflow-hidden">
+        <!-- Header -->
+        <header class="h-16 border-b border-white/5 glass-panel flex items-center justify-between px-8 absolute top-0 w-full z-30">
+            <h1 class="text-lg font-semibold tracking-wide" id="pageTitle">Dashboard Tổng Quan</h1>
+            <div class="flex items-center gap-4 text-slate-400">
+                <button class="hover:text-white transition-colors relative"><i data-lucide="bell" class="w-5 h-5"></i><span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping"></span></button>
+                <div class="w-px h-5 bg-white/10 mx-2"></div>
+                <div class="text-sm font-medium"><i data-lucide="calendar" class="w-4 h-4 inline mr-2 text-indigo-400"></i><span id="dateStr"></span></div>
+            </div>
+        </header>
+
+        <!-- Pages Container -->
+        <div class="flex-1 overflow-y-auto p-8 pt-24" id="contentArea">
+            
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page-fade">
+                <!-- KPI Board -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-blue-500/10 rounded-bl-full transition-transform group-hover:scale-125"></div>
+                        <h3 class="text-slate-400 text-sm font-medium mb-1">Doanh thu tháng</h3>
+                        <p class="text-3xl font-bold text-white mb-2">$84,520</p>
+                        <p class="text-emerald-400 text-xs font-semibold flex items-center"><i data-lucide="trending-up" class="w-3 h-3 mr-1"></i> +12.5% so với tháng trước</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl">
+                        <h3 class="text-slate-400 text-sm font-medium mb-1">Tổng sản phẩm</h3>
+                        <p class="text-3xl font-bold text-white mb-2" id="kpi-products">...</p>
+                        <p class="text-emerald-400 text-xs font-semibold flex items-center"><i data-lucide="package-check" class="w-3 h-3 mr-1"></i> Kho luôn sẵn sàng</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl">
+                        <h3 class="text-slate-400 text-sm font-medium mb-1">Tổng Người dùng</h3>
+                        <p class="text-3xl font-bold text-white mb-2" id="kpi-users">...</p>
+                        <p class="text-blue-400 text-xs font-semibold flex items-center"><i data-lucide="users" class="w-3 h-3 mr-1"></i> Vừa gia nhập</p>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl">
+                        <h3 class="text-slate-400 text-sm font-medium mb-1">Đơn hàng mới chờ XL</h3>
+                        <p class="text-3xl font-bold text-amber-400 mb-2">12</p>
+                        <p class="text-slate-400 text-xs font-semibold">Cần xử lý trong 24h</p>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Chart Main -->
+                    <div class="glass-panel p-6 rounded-2xl col-span-2">
+                        <h3 class="text-lg font-semibold mb-4 text-slate-200">Biểu đồ Doanh Thu</h3>
+                        <canvas id="revenueChart" height="100"></canvas>
+                    </div>
+                    <!-- Recent Activities -->
+                    <div class="glass-panel p-6 rounded-2xl">
+                        <h3 class="text-lg font-semibold mb-4 text-slate-200">Hoạt động gần đây</h3>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center"><i data-lucide="shopping-cart" class="w-4 h-4"></i></div>
+                                <div><p class="text-sm font-medium">Đơn mới #405</p><p class="text-xs text-slate-400">2 phút trước</p></div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center"><i data-lucide="user-plus" class="w-4 h-4"></i></div>
+                                <div><p class="text-sm font-medium">Tài khoản mới</p><p class="text-xs text-slate-400">10 phút trước</p></div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center"><i data-lucide="package" class="w-4 h-4"></i></div>
+                                <div><p class="text-sm font-medium">Cập nhật kho</p><p class="text-xs text-slate-400">1 giờ trước</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Page -->
+            <div id="page-products" class="hidden page-fade h-full flex flex-col">
+                <div class="flex justify-between mb-6">
+                    <h2 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">Quản lý Sản Phẩm</h2>
+                    <button onclick="openProductModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg shadow-indigo-500/20"><i data-lucide="plus" class="w-4 h-4"></i> Thêm SP</button>
+                </div>
+                <div class="glass-panel border border-white/5 rounded-2xl overflow-hidden flex-1 shadow-2xl">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-white/[0.03] text-slate-400 text-xs uppercase font-semibold">
+                            <tr>
+                                <th class="px-6 py-4">Tên SP</th>
+                                <th class="px-6 py-4">Giới thiệu</th>
+                                <th class="px-6 py-4">Giá bán</th>
+                                <th class="px-6 py-4 text-center">Tình trạng</th>
+                                <th class="px-6 py-4 text-right">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prodListRender" class="text-slate-300 divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Page -->
+            <div id="page-users" class="hidden page-fade h-full flex flex-col">
+                <div class="flex justify-between mb-6">
+                    <h2 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-emerald-400">Tài khoản Khách Hàng</h2>
+                    <button onclick="openUserModal()" class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-lg shadow-teal-500/20"><i data-lucide="user-plus" class="w-4 h-4"></i> Thêm User</button>
+                </div>
+                <div class="glass-panel border border-white/5 rounded-2xl overflow-hidden flex-1 shadow-2xl">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-white/[0.03] text-slate-400 text-xs uppercase font-semibold">
+                            <tr>
+                                <th class="px-6 py-4">Username</th>
+                                <th class="px-6 py-4">Email Liên hệ</th>
+                                <th class="px-6 py-4">Quyền Hạn (Role)</th>
+                                <th class="px-6 py-4 text-center">Hoạt động</th>
+                                <th class="px-6 py-4 text-right">Sửa / Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userListRender" class="text-slate-300 divide-y divide-white/5"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="page-settings" class="hidden page-fade">
+                <h2 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-200 to-slate-400 mb-6">Cài đặt Hệ thống</h2>
+                <div class="glass-panel max-w-2xl p-6 rounded-2xl text-slate-400">
+                    Hệ thống chưa hỗ trợ thay đổi chuyên sâu. Vui lòng liên hệ Kỹ Thuật Viên.
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal Form Product -->
+    <div id="modalProduct" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden items-center justify-center pointer-events-none opacity-0 transition-opacity">
+        <div class="glass-panel w-full max-w-md p-8 rounded-2xl pointer-events-auto transform scale-95 transition-transform duration-300" id="modalProductBox">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white" id="modalProdTitle">Thêm Sản Phẩm</h3>
+                <button onclick="closeProductModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+            </div>
+            <form id="frmProduct">
+                <input type="hidden" id="pId">
+                <div class="space-y-4 text-sm text-slate-300">
+                    <div>
+                        <label>Tên sản phẩm *</label>
+                        <input type="text" id="pName" required class="w-full mt-1 bg-slate-800/80 border border-slate-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label>Giá bán ($) *</label>
+                        <input type="number" id="pPrice" required min="0" step="0.01" class="w-full mt-1 bg-slate-800/80 border border-slate-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label>Hình minh họa (Tải ảnh từ máy)</label>
+                        <input type="file" id="pFile" accept="image/*" class="w-full mt-1 bg-slate-800/80 text-slate-400 border border-slate-700 rounded-lg px-2 py-2 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-500/20 file:text-blue-400 hover:file:bg-blue-500/30 transition-all">
+                        <input type="hidden" id="pImg">
+                    </div>
+                    <div>
+                        <label>Mô tả riêng</label>
+                        <textarea id="pDesc" rows="3" class="w-full mt-1 bg-slate-800/80 border border-slate-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg mt-4 transition-colors">Lưu Trữ Báo Cáo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Form User -->
+    <div id="modalUser" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden items-center justify-center pointer-events-none opacity-0 transition-opacity">
+        <div class="glass-panel w-full max-w-md p-8 rounded-2xl pointer-events-auto transform scale-95 transition-transform duration-300" id="modalUserBox">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white" id="modalUserTitle">Thêm Người Dùng</h3>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-white"><i data-lucide="x"></i></button>
+            </div>
+            <form id="frmUser">
+                <input type="hidden" id="uId">
+                <div class="space-y-4 text-sm text-slate-300">
+                    <div>
+                        <label>Tên đăng nhập *</label>
+                        <input type="text" id="uName" required class="w-full mt-1 bg-slate-800/80 border border-slate-700 rounded-lg px-4 py-2 focus:border-teal-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label>Địa chỉ Email *</label>
+                        <input type="email" id="uEmail" required class="w-full mt-1 bg-slate-800/80 border border-slate-700 rounded-lg px-4 py-2 focus:border-teal-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label>Quyền Quản Trị</label>
+                        <select id="uRole" class="w-full mt-1 bg-slate-800/80 border border-slate-700 rounded-lg px-4 py-2 focus:border-teal-500 focus:outline-none">
+                            <option value="Customer">Customer (Khách Hàng)</option>
+                            <option value="Admin">Admin (Quản Trị Viên)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-medium py-3 rounded-lg mt-4 transition-colors">Xác Nhận Người Dùng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        document.getElementById('dateStr').textContent = new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Chart Setup
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Tuần 5'],
+                datasets: [{
+                    label: 'Doanh Thu',
+                    data: [12000, 19000, 15000, 31000, 22000],
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#2563eb'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+
+        // Navigation
+        const pages = ['dashboard', 'products', 'users', 'settings'];
+        const titles = { dashboard: 'Dashboard Tổng Quan', products: 'Kho Hàng Sản Phẩm', users: 'Hồ sơ Người Dùng', settings: 'Thiết lập Hệ Thống' };
+
+        function navigate(page) {
+            pages.forEach(p => {
+                document.getElementById(`page-${p}`).classList.add('hidden');
+                document.getElementById(`nav-${p}`).classList.remove('active');
+            });
+            document.getElementById(`page-${page}`).classList.remove('hidden');
+            document.getElementById(`nav-${page}`).classList.add('active');
+            document.getElementById('pageTitle').textContent = titles[page];
+            
+            if(page === 'dashboard') initData();
+        }
+
+        // ------------------ AUTH LOGICS ------------------
+        // RÀO CHẮN: Kiểm tra xem đã đăng nhập chưa
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // ĐĂNG XUẤT
+        window.logout = function() {
+            localStorage.removeItem('adminToken');
+            window.location.href = '/login.html';
+        };
+
+        // ------------------ API LOGICS ------------------
+        let gProducts = [];
+        let gUsers = [];
+        let isEditing = false;
+
+        async function initData() {
+            try {
+                const resProd = await fetch('/api/Products').catch(()=>null);
+                if (resProd && resProd.ok) gProducts = await resProd.json();
+                
+                const resUser = await fetch('/api/Users').catch(()=>null);
+                if (resUser && resUser.ok) gUsers = await resUser.json();
+
+                document.getElementById('kpi-products').textContent = gProducts.length;
+                document.getElementById('kpi-users').textContent = gUsers.length;
+                
+                renderProducts();
+                renderUsers();
+            } catch(e) {}
+        }
+        initData();
+
+        // ---- PRODUCTS LOGIC ----
+        function renderProducts() {
+            const htm = gProducts.map(p => `
+                <tr class="hover:bg-white/[0.02] border-b border-white/5 transition-colors">
+                    <td class="px-6 py-4 font-medium text-white flex items-center gap-3">
+                        <img src="${p.imageUrl||'https://via.placeholder.com/40'}" class="w-8 h-8 rounded shrink-0 object-cover bg-slate-800">
+                        ${p.name}
+                    </td>
+                    <td class="px-6 py-4 text-slate-400 truncate max-w-[200px]" title="${p.description}">${p.description || '-'}</td>
+                    <td class="px-6 py-4 text-indigo-400 font-semibold">$${p.price.toLocaleString()}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-block px-2 py-1 rounded-full text-xs border ${p.isActive?'bg-emerald-500/10 border-emerald-500/20 text-emerald-400':'bg-red-500/10 border-red-500/20 text-red-400'}">${p.isActive?'Active':'Disabled'}</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick='apiEditProd(${JSON.stringify(p).replace(/'/g, "&#39;")})' class="text-slate-400 hover:text-blue-500 mx-1"><i data-lucide="pencil" class="w-4 h-4 inline"></i></button>
+                        <button onclick='apiDelProd(${p.id})' class="text-slate-400 hover:text-red-500 mx-1"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('prodListRender').innerHTML = htm || '<tr><td colspan="5" class="py-8 text-center text-slate-500 italic">Trống rỗng...</td></tr>';
+            lucide.createIcons();
+        }
+
+        async function apiDelProd(id) {
+            if(confirm("Xóa sản phẩm này chứ?")) {
+                await fetch(`/api/Products/${id}`, {method:'DELETE'});
+                await initData();
+            }
+        }
+
+        window.apiEditProd = (p) => {
+            isEditing = true;
+            document.getElementById('pId').value = p.id;
+            document.getElementById('pName').value = p.name;
+            document.getElementById('pDesc').value = p.description;
+            document.getElementById('pPrice').value = p.price;
+            document.getElementById('pImg').value = p.imageUrl || '';
+            document.getElementById('modalProdTitle').textContent = 'Cập nhật Sản Phẩm';
+            toggleModal('modalProduct', true);
+        };
+
+        document.getElementById('frmProduct').addEventListener('submit', async(e)=>{
+            e.preventDefault();
+            
+            // 1. Upload ảnh trước nếu người dùng có chọn file
+            let finalImageUrl = document.getElementById('pImg').value;
+            const fileInput = document.getElementById('pFile');
+            if(fileInput.files.length > 0) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                // Nút chờ tải lên
+                const btnSubmit = e.target.querySelector('button[type="submit"]');
+                const oldText = btnSubmit.textContent;
+                btnSubmit.textContent = 'Đang tải ảnh...';
+                
+                const uploadRes = await fetch('/api/Upload', { method: 'POST', body: formData });
+                if(uploadRes.ok) {
+                    const data = await uploadRes.json();
+                    finalImageUrl = data.url;
+                }
+                btnSubmit.textContent = oldText;
+            }
+
+            // 2. Gom dữ liệu gửi đi
+            const payload = {
+                name: document.getElementById('pName').value,
+                description: document.getElementById('pDesc').value,
+                price: parseFloat(document.getElementById('pPrice').value),
+                imageUrl: finalImageUrl,
+                isActive: true
+            };
+            
+            if(isEditing) {
+                payload.id = parseInt(document.getElementById('pId').value);
+                await fetch(`/api/Products/${payload.id}`, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            } else {
+                await fetch('/api/Products', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            }
+
+            closeProductModal();
+            await initData();
+        });
+
+        function openProductModal() { 
+            isEditing = false;
+            document.getElementById('frmProduct').reset(); 
+            document.getElementById('pId').value = '';
+            document.getElementById('pImg').value = '';
+            document.getElementById('modalProdTitle').textContent = 'Thêm Sản Phẩm';
+            toggleModal('modalProduct', true); 
+        }
+        function closeProductModal() { toggleModal('modalProduct', false); }
+
+        // ---- USERS LOGIC ----
+        function renderUsers() {
+            const htm = gUsers.map(u => `
+                <tr class="hover:bg-white/[0.02] border-b border-white/5 transition-colors">
+                    <td class="px-6 py-4 font-medium text-white flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center font-bold font-mono text-xs">${u.username.substring(0,2).toUpperCase()}</div>
+                        ${u.username}
+                    </td>
+                    <td class="px-6 py-4 text-slate-400">${u.email}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${u.role==='Admin'?'bg-rose-500/20 text-rose-400':'bg-slate-700 text-slate-300'}"><i data-lucide="${u.role==='Admin'?'shield':'user-circle'}" class="w-3 h-3"></i> ${u.role}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="w-2 h-2 rounded-full inline-block ${u.isActive?'bg-emerald-500':'bg-red-500'}"></span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick='apiDelUser(${u.id})' class="text-slate-400 hover:text-red-500 mx-1"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('userListRender').innerHTML = htm || '<tr><td colspan="5" class="py-8 text-center text-slate-500 italic">Hệ thống chưa có user nào.</td></tr>';
+            lucide.createIcons();
+        }
+
+        async function apiDelUser(id) {
+            if(confirm("Hiệu lệnh không thể quay lại! Thu hồi tài khoản người dùng này?")) {
+                await fetch(`/api/Users/${id}`, {method:'DELETE'});
+                await initData();
+            }
+        }
+
+        document.getElementById('frmUser').addEventListener('submit', async(e)=>{
+            e.preventDefault();
+            const payload = {
+                username: document.getElementById('uName').value,
+                email: document.getElementById('uEmail').value,
+                role: document.getElementById('uRole').value,
+                isActive: true
+            };
+            await fetch('/api/Users', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            closeUserModal();
+            await initData();
+        });
+
+        function openUserModal() { document.getElementById('frmUser').reset(); toggleModal('modalUser', true); }
+        function closeUserModal() { toggleModal('modalUser', false); }
+
+        function toggleModal(id, show) {
+            const el = document.getElementById(id);
+            const box = document.getElementById(id+'Box');
+            if(show) {
+                el.classList.remove('hidden'); requestAnimationFrame(()=> { el.classList.remove('opacity-0'); box.classList.remove('scale-95'); });
+            } else {
+                el.classList.add('opacity-0'); box.classList.add('scale-95'); setTimeout(()=> el.classList.add('hidden'), 300);
+            }
+        }
+    </script>
+</body>
+</html>
