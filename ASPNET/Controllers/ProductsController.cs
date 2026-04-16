@@ -16,7 +16,6 @@ namespace ASPNET.Controllers
             _context = context;
         }
 
-        // GET: api/Products (Lấy danh sách tất cả sản phẩm)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {

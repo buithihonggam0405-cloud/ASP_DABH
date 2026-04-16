@@ -26,7 +26,6 @@ namespace ASPNET.Controllers
                 Directory.CreateDirectory(uploadsFolder);
             }
 
-            // Tạo tên file dạng ngẫu nhiên để không bị trùng
             var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
             var filePath = Path.Combine(uploadsFolder, fileName);
 

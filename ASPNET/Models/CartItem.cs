@@ -7,12 +7,12 @@ namespace ASPNET.Models
         public int Id { get; set; }
         
         public int CartId { get; set; }
-        [JsonIgnore] // Tránh lỗi lặp vòng vô tận khi trả về dữ liệu API
+        [JsonIgnore] 
         public Cart? Cart { get; set; }
 
         public int ProductId { get; set; }
         public Product? Product { get; set; }
 
-        public int Quantity { get; set; } = 1; // Mặc định mua 1 món
+        public int Quantity { get; set; } = 1; 
     }
 }

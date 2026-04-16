@@ -1,3 +1,5 @@
+using System.IO;
+using Microsoft.Extensions.FileProviders;
 using ASPNET.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,33 +11,62 @@ namespace ASP.NET
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddDbContext<ASPNET.Data.AppDbContext>(options =>
+            string frontendPath = @"F:\ASPNET_PROJECT\wwwroot"; 
+
+            builder.Environment.WebRootPath = frontendPath;
+
+            if (!Directory.Exists(frontendPath))
+            {
+                var dir = new DirectoryInfo(builder.Environment.ContentRootPath);
+                while (dir != null)
+                {
+                    var testPath = Path.Combine(dir.FullName, "wwwroot");
+                    if (Directory.Exists(testPath))
+                    {
+                        frontendPath = testPath;
+                        builder.Environment.WebRootPath = frontendPath;
+                        break;
+                    }
+                    dir = dir.Parent;
+                }
+            }
+
+            builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
+            builder.Services.AddCors(options => {
+                options.AddPolicy("AllowAll", policy => {
+                    policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                });
+            });
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
+
+            var defaultOptions = new DefaultFilesOptions();
+            defaultOptions.FileProvider = new PhysicalFileProvider(frontendPath);
+            defaultOptions.DefaultFileNames.Clear();
+            defaultOptions.DefaultFileNames.Add("login.html");
+            defaultOptions.DefaultFileNames.Add("index.html");
+            app.UseDefaultFiles(defaultOptions);
+
+            app.UseStaticFiles(new StaticFileOptions
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
-
-            app.UseHttpsRedirection();
-
-            // Cho phép ứng dụng đọc các file HTML/CSS/JS từ thư mục wwwroot
-            app.UseDefaultFiles();
-            app.UseStaticFiles();
+                FileProvider = new PhysicalFileProvider(frontendPath),
+                RequestPath = ""
+            });
 
             app.UseAuthorization();
 
-
+            app.UseCors("AllowAll");
             app.MapControllers();
 
             app.Run();
