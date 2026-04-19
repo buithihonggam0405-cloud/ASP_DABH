@@ -32,6 +32,15 @@ namespace ASPNET.Controllers
             return cart;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Cart>>> GetAllCarts()
+        {
+            return await _context.Carts
+                .Include(c => c.Items)
+                .ThenInclude(i => i.Product)
+                .ToListAsync();
+        }
+
         [HttpPost("AddToCart")]
         public async Task<ActionResult<Cart>> AddToCart(string sessionId, int productId, int quantity = 1)
         {
@@ -62,6 +71,44 @@ namespace ASPNET.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            return Ok(cart);
+        }
+
+        [HttpDelete("RemoveFromCart")]
+        public async Task<IActionResult> RemoveFromCart(string sessionId, int productId)
+        {
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.SessionId == sessionId);
+
+            if (cart == null) return NotFound("Giỏ hàng không tồn tại.");
+
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item != null)
+            {
+                cart.Items.Remove(item);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(cart);
+        }
+
+        [HttpPut("UpdateQuantity")]
+        public async Task<IActionResult> UpdateQuantity(string sessionId, int productId, int quantity)
+        {
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                .FirstOrDefaultAsync(c => c.SessionId == sessionId);
+
+            if (cart == null) return NotFound("Giỏ hàng không tồn tại.");
+
+            var item = cart.Items.FirstOrDefault(i => i.ProductId == productId);
+            if (item != null)
+            {
+                item.Quantity = quantity;
+                await _context.SaveChangesAsync();
+            }
 
             return Ok(cart);
         }
