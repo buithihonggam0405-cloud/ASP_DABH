@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang Quản Trịt</title>
+    <title>Trang Quản Trị</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -71,6 +71,9 @@
             </button>
             <button onclick="navigate('users')" id="nav-users" class="sidebar-item px-4 py-3 flex items-center gap-3 text-slate-500 hover:text-blue-600 transition-all font-semibold text-sm">
                 <i data-lucide="users" class="w-5 h-5"></i> Người dùng
+            </button>
+            <button onclick="navigate('carts')" id="nav-carts" class="sidebar-item px-4 py-3 flex items-center gap-3 text-slate-500 hover:text-blue-600 transition-all font-semibold text-sm text-amber-500">
+                <i data-lucide="shopping-cart" class="w-5 h-5"></i> Giỏ hàng (Mới)
             </button>
         </nav>
 
@@ -210,6 +213,28 @@
                 </div>
             </div>
 
+            <!-- CARTS PAGE -->
+            <div id="page-carts" class="hidden page-fade">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">Theo dõi Giỏ hàng</h2>
+                        <p class="text-sm text-slate-400 font-medium">Xem các giỏ hàng đang hoạt động của khách hàng</p>
+                    </div>
+                </div>
+                <div class="glass-panel rounded-3xl border border-white overflow-hidden">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50/50 text-slate-400 text-[10px] uppercase font-bold tracking-widest border-b border-slate-100">
+                            <tr>
+                                <th class="px-8 py-5">Chủ giỏ hàng (Session)</th>
+                                <th class="px-8 py-5">Chi tiết sản phẩm</th>
+                                <th class="px-8 py-5 text-right">Số lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartListRender" class="divide-y divide-slate-100 text-slate-600"></tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -260,34 +285,36 @@
             return res;
         }
 
-        let gProducts = [], gUsers = [], gOrders = [];
+        let gProducts = [], gUsers = [], gOrders = [], gCarts = [];
         let isEditing = false;
 
         async function initData() {
-            const [p, u, o] = await Promise.all([
+            const [p, u, o, c] = await Promise.all([
                 apiFetch('/api/Products').then(r => r?.json() || []),
                 apiFetch('/api/Users').then(r => r?.json() || []),
-                apiFetch('/api/Orders').then(r => r?.json() || [])
+                apiFetch('/api/Orders').then(r => r?.json() || []),
+                apiFetch('/api/Cart').then(r => r?.json() || [])
             ]);
-            gProducts = p; gUsers = u; gOrders = o;
+            gProducts = p; gUsers = u; gOrders = o; gCarts = c;
             
             document.getElementById('kpi-products').textContent = gProducts.length;
             document.getElementById('kpi-users').textContent = gUsers.length;
             document.getElementById('kpi-orders').textContent = gOrders.filter(x => x.status === 'Pending').length;
             document.getElementById('badge-orders').textContent = gOrders.length;
 
-            renderProducts(); renderUsers(); renderOrders();
+            renderProducts(); renderUsers(); renderOrders(); renderCarts();
         }
 
         function navigate(page) {
-            ['dashboard', 'products', 'users', 'orders'].forEach(p => {
+            ['dashboard', 'products', 'users', 'orders', 'carts'].forEach(p => {
                 const el = document.getElementById(`page-${p}`);
                 if (el) el.classList.add('hidden');
-                document.getElementById(`nav-${p}`).classList.remove('active');
+                const nav = document.getElementById(`nav-${p}`);
+                if (nav) nav.classList.remove('active');
             });
             document.getElementById(`page-${page}`).classList.remove('hidden');
             document.getElementById(`nav-${page}`).classList.add('active');
-            document.getElementById('pageTitle').textContent = page === 'dashboard' ? 'Dashboard Tổng Quan' : page === 'orders' ? 'Quản lý Đơn hàng' : page === 'products' ? 'Danh mục Sản phẩm' : 'Danh sách Người dùng';
+            document.getElementById('pageTitle').textContent = page === 'dashboard' ? 'Dashboard Tổng Quan' : page === 'carts' ? 'Quản lý Giỏ hàng' : page === 'orders' ? 'Quản lý Đơn hàng' : page === 'products' ? 'Danh mục Sản phẩm' : 'Danh sách Người dùng';
             initData();
         }
 
@@ -385,6 +412,31 @@
                 </tr>
             `).join('');
             document.getElementById('userListRender').innerHTML = htm || '<tr><td colspan="5" class="py-12 text-center text-slate-300 font-medium italic">Không tìm thấy người dùng...</td></tr>';
+            lucide.createIcons();
+        }
+
+        function renderCarts() {
+            const htm = gCarts.map(c => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-8 py-5">
+                        <div class="font-bold text-slate-900">${c.sessionId}</div>
+                        <div class="text-[10px] text-slate-400">ID Giỏ: ${c.id}</div>
+                    </td>
+                    <td class="px-8 py-5">
+                        <div class="flex flex-col gap-2">
+                            ${(c.items || []).map(i => `
+                                <div class="flex items-center gap-2">
+                                    <img src="${i.product?.imageUrl || 'https://via.placeholder.com/50'}" class="w-8 h-8 rounded-lg object-cover">
+                                    <span class="text-xs font-medium">${i.product?.name || 'Sản phẩm đã xóa'}</span>
+                                    <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">x${i.quantity}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </td>
+                    <td class="px-8 py-5 text-right font-black text-blue-600">${(c.items || []).reduce((acc,i)=>acc+i.quantity, 0)} món</td>
+                </tr>
+            `).join('');
+            document.getElementById('cartListRender').innerHTML = htm || '<tr><td colspan="3" class="py-12 text-center text-slate-300 font-medium italic">Không có giỏ hàng nào đang hoạt động...</td></tr>';
             lucide.createIcons();
         }
 

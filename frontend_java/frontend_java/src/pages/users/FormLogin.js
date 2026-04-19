@@ -99,9 +99,9 @@ const FormLogin = () => {
                                     value={form.email}
                                     onChange={onChange}
                                     className="form-control border-left-0"
-                                    placeholder="Email"
-                                    type="email"
-                                    autoComplete="email"
+                                    placeholder="Email hoặc Tên đăng nhập"
+                                    type="text"
+                                    autoComplete="username"
                                 />
                             </div>
                         </div>

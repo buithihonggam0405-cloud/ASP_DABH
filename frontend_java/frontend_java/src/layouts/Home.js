@@ -51,13 +51,18 @@ const Home = () => {
     useEffect(() => {
         const fetchAll = async () => {
             try {
-                // Lấy tất cả sản phẩm và phân bổ vào các mục
-                const res = await GET_PRODUCT(0, 12);
-                const allProducts = res?.products || [];
-                
-                setRecommendedData(allProducts.slice(0, 4));
-                setProductCategory(allProducts.slice(4, 8));
-                setProductCategory2(allProducts.slice(8, 12));
+                // Lấy sản phẩm mới
+                const resNew = await GET_PRODUCT(1, 4);
+                setRecommendedData(resNew?.products || []);
+
+                // Lấy Điện thoại (Giả định ID 1)
+                const resPhone = await GET_PRODUCTS_BY_CATEGORY(1, 1, 4);
+                setProductCategory(resPhone?.products || []);
+
+                // Lấy Laptop (Giả định ID 2)
+                const resLaptop = await GET_PRODUCTS_BY_CATEGORY(2, 1, 4);
+                setProductCategory2(resLaptop?.products || []);
+
             } catch (error) {
                 console.error("Lỗi lấy sản phẩm tổng quát:", error);
             }

@@ -22,8 +22,8 @@ const Detail = () => {
         try {
             setLoading(true);
 
-            // Ví dụ endpoint: public/products/{id}
-            const data = await GET_ID("public/products", productId);
+            // Chỉ truyền duy nhất productId
+            const data = await GET_ID(productId);
 
             // Nếu apiService bạn trả axios response thì dùng data.data
             const p = data?.productId ? data : data?.data;

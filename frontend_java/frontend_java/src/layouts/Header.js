@@ -10,7 +10,7 @@ import {
     settingsOutline,
 } from "ionicons/icons";
 import Navbar from "../pages/navbar/Navbar";
-import { GET_CATEGORIES, removeToken, removeEmail, getUserEmail } from "../config/apiService";
+import { GET_CATEGORIES, removeToken, removeEmail, getUserEmail, getToken } from "../config/apiService";
 
 const Header = () => {
     const navigate = useNavigate();
@@ -30,7 +30,7 @@ const Header = () => {
 
     /* ================= AUTH ================= */
     const checkAuth = () => {
-        const token = localStorage.getItem("jwt-token");
+        const token = getToken();
         setIsLoggedIn(!!token);
         setEmail(getUserEmail() || "");
     };
@@ -173,22 +173,20 @@ const Header = () => {
                                 )}
 
                                 {/* Orders & Cart */}
-                                {isLoggedIn && (
-                                    <>
-                                        <div className="widget-header mr-3">
-                                            <Link to="/orders" className="widget-view">
-                                                <IonIcon icon={receiptOutline} />
-                                                <small className="text">Đơn hàng</small>
-                                            </Link>
-                                        </div>
-                                        <div className="widget-header">
-                                            <Link to="/cart" className="widget-view">
-                                                <IonIcon icon={cartOutline} />
-                                                <small className="text">Giỏ hàng</small>
-                                            </Link>
-                                        </div>
-                                    </>
-                                )}
+                                <div className="widget-header mr-3">
+                                    {isLoggedIn && (
+                                        <Link to="/orders" className="widget-view">
+                                            <IonIcon icon={receiptOutline} />
+                                            <small className="text">Đơn hàng</small>
+                                        </Link>
+                                    )}
+                                </div>
+                                <div className="widget-header">
+                                    <Link to="/cart" className="widget-view">
+                                        <IonIcon icon={cartOutline} />
+                                        <small className="text">Giỏ hàng</small>
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>

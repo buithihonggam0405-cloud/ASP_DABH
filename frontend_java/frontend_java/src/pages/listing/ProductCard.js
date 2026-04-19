@@ -29,30 +29,18 @@ const ProductCard = ({ product, className = "col-xl-3 col-lg-3 col-md-4 col-6 mb
 
     const handleAddToCart = async () => {
         try {
-            // Nếu bạn đã có logic cart theo user giống phần Cart:
             const email = getUserEmail();
             if (!email) {
                 alert("Vui lòng đăng nhập để thêm vào giỏ hàng.");
                 return;
             }
 
-            const user = await GET_USER_BY_EMAIL(email);
-            const userId = user?.userId ?? user?.data?.userId;
-
-            const cartRes = await GET_CART_BY_USER_ID(userId);
-            const cartData = cartRes?.cartId ? cartRes : cartRes?.data;
-
-            const cartId = cartData?.cartId;
-            if (!cartId) {
-                alert("Không tìm thấy giỏ hàng.");
-                return;
-            }
-
-            await ADD_TO_CART(cartId, product.productId, 1);
-            alert("Đã thêm vào giỏ hàng!");
+            // Sử dụng email làm sessionId cho Backend
+            await ADD_TO_CART(email, productId, 1);
+            alert("Đã thêm sản phẩm vào giỏ hàng!");
         } catch (e) {
             console.error("Add to cart error:", e);
-            alert("Thêm vào giỏ thất bại.");
+            alert("Thêm vào giỏ thất bại. Vui lòng thử lại!");
         }
     };
 

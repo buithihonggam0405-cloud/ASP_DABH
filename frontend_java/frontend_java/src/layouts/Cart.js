@@ -32,47 +32,36 @@ const Cart = () => {
             const email = getUserEmail();
             if (!email) {
                 setCartItems([]);
-                setCartId(null);
                 return;
             }
 
-            const userRes = await GET_USER_BY_EMAIL(email);
-            const userId = userRes?.userId ?? userRes?.data?.userId; // tuỳ apiService bạn đang trả data hay axios res
-
-            const cartRes = await GET_CART_BY_USER_ID(userId);
-            const cartData = cartRes?.cartId ? cartRes : cartRes?.data; // tuỳ apiService
+            // Gọi API bằng Email (SessionId)
+            const cartRes = await GET_CART_BY_USER_ID(email);
+            const cartData = cartRes?.id ? cartRes : cartRes?.data; 
 
             if (!cartData) {
                 setCartItems([]);
-                setCartId(null);
                 return;
             }
 
-            setCartId(cartData.cartId);
+            setCartId(cartData.id || cartData.sessionId);
 
-            // map dữ liệu giống RN
-            const mappedItems = (cartData.cartItems ?? []).map((ci) => ({
-                productId: ci.product?.productId,
-                productName: ci.product?.productName,
-                image: ci.product?.image,
+            // Map dữ liệu từ biến "items" của Backend
+            const mappedItems = (cartData.items ?? []).map((ci) => ({
+                productId: ci.product?.id || ci.productId,
+                productName: ci.product?.name || ci.productName,
+                image: ci.product?.imageUrl || ci.product?.image,
                 quantity: ci.quantity,
-                maxStock: ci.product?.quantity ?? 0,
+                maxStock: ci.product?.quantity ?? 100,
                 isChecked: true,
-
-                // backend đã tính giá trong giỏ:
-                unitPrice: ci.productPrice ?? ci.product?.specialPrice ?? ci.product?.price ?? 0,
-
-                // giữ thêm để debug nếu cần
-                cartItemId: ci.cartItemId,
-                discount: ci.discount ?? ci.product?.discount,
-                rawProduct: ci.product,
+                unitPrice: ci.product?.price ?? 0,
+                cartItemId: ci.id
             }));
 
             setCartItems(mappedItems);
         } catch (error) {
             console.error("Lỗi lấy giỏ hàng:", error);
             setCartItems([]);
-            setCartId(null);
         } finally {
             setLoading(false);
         }
@@ -104,6 +93,9 @@ const Cart = () => {
 
     // ---- update quantity giống RN ----
     const handleQuantityChange = async (productId, newQuantity) => {
+        const email = getUserEmail();
+        if (!email) return;
+
         const current = cartItems.find((it) => it.productId === productId);
         if (current && current.maxStock && newQuantity > current.maxStock) {
             alert(`Kho chỉ còn ${current.maxStock} sản phẩm.`);
@@ -116,8 +108,7 @@ const Cart = () => {
         );
 
         try {
-            await UPDATE_CART_QUANTITY(cartId, productId, newQuantity);
-            // đồng bộ lại totalPrice từ backend (nếu muốn)
+            await UPDATE_CART_QUANTITY(email, productId, newQuantity);
             await fetchCartData();
         } catch (error) {
             console.error("Lỗi update:", error);
@@ -127,18 +118,20 @@ const Cart = () => {
 
     // ---- delete 1 item giống RN ----
     const handleDeleteItem = async (productId) => {
+        const email = getUserEmail();
+        if (!email) return;
+
         const ok = window.confirm("Bạn có chắc muốn xóa sản phẩm này?");
         if (!ok) return;
 
-        // optimistic remove
-        setCartItems((prev) => prev.filter((it) => it.productId !== productId));
-
         try {
-            await DELETE_FROM_CART(cartId, productId);
-            await fetchCartData();
+            await DELETE_FROM_CART(email, productId);
+            // Sau khi xóa xong, gọi lại hàm fetch để cập nhật giao diện
+            fetchCartData();
+            alert("Xóa thành công!");
         } catch (error) {
             console.error("Lỗi xóa:", error);
-            await fetchCartData();
+            alert("Xóa thất bại! (Bạn nhớ khởi động lại Backend nhé)");
         }
     };
 

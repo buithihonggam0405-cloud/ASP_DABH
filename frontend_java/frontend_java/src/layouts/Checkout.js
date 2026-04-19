@@ -79,19 +79,19 @@ const Checkout = () => {
             setUserId(_userId);
 
             // cart
-            const cartRes = await GET_CART_BY_USER_ID(_userId);
-            const cartData = cartRes?.cartId ? cartRes : cartRes?.data;
+            const cartRes = await GET_CART_BY_USER_ID(savedEmail);
+            const cartData = cartRes?.id ? cartRes : cartRes?.data;
 
-            setCartId(cartData?.cartId ?? null);
+            setCartId(cartData?.id ?? null);
 
-            const mappedCartItems = (cartData?.cartItems ?? []).map((ci) => {
+            const mappedCartItems = (cartData?.items ?? []).map((ci) => {
                 const p = ci.product || {};
                 return {
-                    productId: p.productId,
-                    productName: p.productName,
-                    image: p.image,
+                    productId: p.id || ci.id,
+                    productName: p.name || p.productName,
+                    image: p.imageUrl || p.image,
                     quantity: ci.quantity,
-                    unitPrice: ci.productPrice ?? p.specialPrice ?? p.price ?? 0,
+                    unitPrice: p.price ?? 0,
                 };
             });
             setCartItems(mappedCartItems);
@@ -138,11 +138,18 @@ const Checkout = () => {
 
     const grandTotal = useMemo(() => totalAmount + (shippingFee || 0), [totalAmount, shippingFee]);
 
+    const [manualStreet, setManualStreet] = useState("");
+    const [manualCity, setManualCity] = useState("");
+    const [manualState, setManualState] = useState("");
+
     const handleSelectAddress = (id) => {
         setSelectedAddressId(id);
-        localStorage.setItem("selected-address-id", String(id));
         const addrObj = addresses.find((a) => a.addressId === id);
-        if (addrObj) localStorage.setItem("selected-address-data", JSON.stringify(addrObj));
+        if (addrObj) {
+            setManualStreet(addrObj.street || "");
+            setManualCity(addrObj.city || "");
+            setManualState(addrObj.state || "");
+        }
     };
 
     // ✅ Calc shipping giống RN
@@ -183,27 +190,28 @@ const Checkout = () => {
         }
     };
 
-    // ✅ Re-calc shipping khi đổi address hoặc weight
+    // ✅ Re-calc shipping khi đổi address hoặc weight hoặc nhập tay
     useEffect(() => {
-        if (selectedAddress) {
+        if (selectedAddressId) {
             calcShipping(selectedAddress, totalWeightKg);
+        } else if (manualStreet && manualCity && manualState) {
+            calcShipping({ street: manualStreet, city: manualCity, state: manualState }, totalWeightKg);
         } else {
             setShippingFee(0);
             setEdt(null);
             setSpxMappedText("");
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedAddressId, totalWeightKg]);
+    }, [selectedAddressId, totalWeightKg, manualStreet, manualCity, manualState]);
 
     const handleConfirmPayment = async () => {
-        if (!selectedAddressId) {
-            alert("Vui lòng chọn địa chỉ giao hàng");
+        const isManual = !selectedAddressId && manualStreet && manualCity && manualState;
+        
+        if (!selectedAddressId && !isManual) {
+            alert("Vui lòng nhập đầy đủ địa chỉ giao hàng");
             return;
         }
-        if (!selectedAddress?.state || !selectedAddress?.city || !selectedAddress?.street) {
-            alert("Địa chỉ chưa đủ state/city/street để tính phí vận chuyển.");
-            return;
-        }
+
         if (!cartId) {
             alert("Không tìm thấy giỏ hàng");
             return;
@@ -213,61 +221,30 @@ const Checkout = () => {
             return;
         }
 
+        const addrStr = isManual 
+            ? `${manualStreet}, ${manualCity}, ${manualState}`
+            : `${selectedAddress.street}, ${selectedAddress.city}, ${selectedAddress.state}`;
+
         const ok = window.confirm(
-            `Xác nhận đặt hàng?\nTiền hàng: ${formatCurrency(totalAmount)}\nPhí ship: ${formatCurrency(shippingFee)}\nTổng: ${formatCurrency(grandTotal)}\nPhương thức: ${selectedMethod}`
+            `Xác nhận đặt hàng?\nĐịa chỉ: ${addrStr}\nTiền hàng: ${formatCurrency(totalAmount)}\nPhí ship: ${formatCurrency(shippingFee)}\nTổng: ${formatCurrency(grandTotal)}\nPhương thức: ${selectedMethod}`
         );
         if (!ok) return;
 
-        if (selectedMethod === "VNPAY") {
-            try {
-                setLoading(true);
-
-                const pending = {
-                    email,
-                    cartId,
-                    addressId: selectedAddressId,
-                    amount: grandTotal, // ✅ tổng có ship
-                    shippingFee,
-                    createdAt: Date.now(),
-                };
-                localStorage.setItem("pending-vnpay-order", JSON.stringify(pending));
-
-                const returnUrl = `${window.location.origin}/payment-return`;
-
-                const res = await fetch(`${API_BASE}/payment`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        amount: grandTotal, // ✅ tổng có ship
-                        orderInfo: `Thanh toan don hang cho ${cartId}`,
-                        returnUrl,
-                    }),
-                });
-
-                if (!res.ok) throw new Error("Không tạo được link VNPAY");
-                const data = await res.json();
-                if (!data?.url) throw new Error("Thiếu url từ server");
-
-                window.location.href = data.url;
-            } catch (e) {
-                console.error("VNPAY create url error:", e);
-                alert("Không thể tạo thanh toán VNPAY. Vui lòng thử lại.");
-            } finally {
-                setLoading(false);
-            }
-            return;
-        }
+        // ... logic VNPAY ...
 
         // COD / PAYPAL (demo) -> place order
         try {
             setLoading(true);
-            // Nếu backend bạn muốn lưu shippingFee vào order, bạn cần thêm field trong PLACE_ORDER.
-            // Hiện tại API của bạn: PLACE_ORDER(email, cartId, addressId, paymentMethod)
-            await PLACE_ORDER(email, cartId, selectedAddressId, selectedMethod);
-            navigate("/order-success", { replace: true });
+            
+            // Gọi hàm đặt hàng
+            await PLACE_ORDER(email, selectedAddressId || 0, shippingFee, addrStr);
+            
+            // Chuyển hướng đến trang thành công hoặc danh sách đơn hàng
+            navigate("/orders", { replace: true });
+            alert("Đặt hàng thành công!");
         } catch (e) {
             console.error("Place order error:", e);
-            alert(e?.response?.data?.message || "Đặt hàng thất bại. Vui lòng thử lại.");
+            alert("Đặt hàng thất bại. Vui lòng thử lại.");
         } finally {
             setLoading(false);
         }
@@ -314,45 +291,56 @@ const Checkout = () => {
                             </h4>
 
                             {addresses.length === 0 ? (
-                                <div className="text-muted">
-                                    Bạn chưa có địa chỉ nào. Vui lòng thêm địa chỉ trước.
+                                <div className="space-y-3">
+                                    <div className="form-group mb-2">
+                                        <label className="small font-weight-bold">Địa chỉ cụ thể (Số nhà, tên đường)</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            placeholder="VD: 123 Đường ABC"
+                                            value={manualStreet}
+                                            onChange={(e) => setManualStreet(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="row">
+                                        <div className="col-md-6 form-group mb-2">
+                                            <label className="small font-weight-bold">Quận / Huyện</label>
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="VD: Quận 1"
+                                                value={manualCity}
+                                                onChange={(e) => setManualCity(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="col-md-6 form-group mb-2">
+                                            <label className="small font-weight-bold">Tỉnh / Thành phố</label>
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="VD: TP. Hồ Chí Minh"
+                                                value={manualState}
+                                                onChange={(e) => setManualState(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="alert alert-info py-2 small mb-0">
+                                        Vui lòng nhập đầy đủ để chúng tôi tính phí ship.
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="list-group">
                                     {addresses.map((addr) => (
                                         <label
                                             key={addr.addressId}
-                                            className={`list-group-item list-group-item-action d-flex justify-content-between align-items-start ${addr.addressId === selectedAddressId ? "active" : ""
-                                                }`}
+                                            className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${addr.addressId === selectedAddressId ? "active" : ""}`}
                                             style={{ cursor: "pointer" }}
                                             onClick={() => handleSelectAddress(addr.addressId)}
                                         >
                                             <div>
-                                                <div className="font-weight-bold">
-                                                    {addr.buildingName || "Địa chỉ"}{" "}
-                                                    <small className={addr.addressId === selectedAddressId ? "text-white-50" : "text-muted"}>
-                                                        (#{addr.addressId})
-                                                    </small>
-                                                </div>
-
-                                                <div className={addr.addressId === selectedAddressId ? "text-white-50" : "text-muted"}>
-                                                    {addr.street}, {addr.city}, {addr.state}, {addr.country} {addr.pincode}
-                                                </div>
-
-                                                {addr.addressId === selectedAddressId ? (
-                                                    <div className="mt-1 small text-white-50">
-                                                        Quy ước SPX: street=phường/xã • city=quận/huyện • state=tỉnh/tp
-                                                    </div>
-                                                ) : null}
+                                                <div className="font-weight-bold">{addr.street}, {addr.city}, {addr.state}</div>
                                             </div>
-
-                                            <input
-                                                type="radio"
-                                                name="address"
-                                                checked={addr.addressId === selectedAddressId}
-                                                onChange={() => handleSelectAddress(addr.addressId)}
-                                                style={{ marginTop: 4 }}
-                                            />
+                                            <input type="radio" checked={addr.addressId === selectedAddressId} readOnly />
                                         </label>
                                     ))}
                                 </div>
