@@ -1,7 +1,7 @@
 // APIService.js (React Web) - Final Fix for ASP.NET
 import axios from "axios";
 
-const API_URL = "http://localhost:5233/api";
+const API_URL = "http://localhost:5000/api";
 
 // ===== Base Configuration & Token =====
 export function getToken() { return localStorage.getItem("adminToken"); }
@@ -113,7 +113,7 @@ export function GET_IMG(arg1, arg2) {
   const imgUrl = arg2 || arg1;
   if (!imgUrl) return "https://via.placeholder.com/300";
   if (imgUrl.startsWith("http")) return imgUrl;
-  return `http://localhost:5233${imgUrl}`;
+  return `http://localhost:5000${imgUrl}`;
 }
 
 // ===== Cart =====
@@ -132,13 +132,17 @@ export async function DELETE_FROM_CART(sessionId, productId) {
 }
 
 // ===== Orders =====
-export async function PLACE_ORDER(email, addressId, shippingFee, fullAddress) { 
+export async function PLACE_ORDER(email, addressId, shippingFee, fullAddress, paymentMethod = "COD") { 
     return callApi("Orders", "POST", { 
         email, 
         addressId, 
         shippingFee, 
-        fullAddress 
+        fullAddress,
+        paymentMethod
     }); 
+}
+export async function GET_VNPAY_URL(orderId, amount) {
+    return callApi("Payment/vnpay-url", "POST", { orderId, amount });
 }
 export async function GET_ORDERS_BY_EMAIL(email) { return callApi("Orders", "GET"); }
 export async function GET_ORDER_DETAIL(email, orderId) { return { id: orderId, totalAmount: 0 }; }

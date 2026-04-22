@@ -109,7 +109,8 @@ const Cart = () => {
 
         try {
             await UPDATE_CART_QUANTITY(email, productId, newQuantity);
-            await fetchCartData();
+            fetchCartData();
+            window.dispatchEvent(new Event("cartUpdated"));
         } catch (error) {
             console.error("Lỗi update:", error);
             await fetchCartData();
@@ -128,6 +129,7 @@ const Cart = () => {
             await DELETE_FROM_CART(email, productId);
             // Sau khi xóa xong, gọi lại hàm fetch để cập nhật giao diện
             fetchCartData();
+            window.dispatchEvent(new Event("cartUpdated"));
             alert("Xóa thành công!");
         } catch (error) {
             console.error("Lỗi xóa:", error);

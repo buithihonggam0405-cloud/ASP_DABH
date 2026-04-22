@@ -15,6 +15,7 @@ import {
     GET_CART_BY_USER_ID,
     GET_USER_ADDRESSES,
     PLACE_ORDER,
+    GET_VNPAY_URL,
     getUserEmail,
     GET_IMG,
 } from "../config/apiService";
@@ -232,16 +233,28 @@ const Checkout = () => {
 
         // ... logic VNPAY ...
 
-        // COD / PAYPAL (demo) -> place order
+        // COD / VNPAY / PAYPAL
         try {
             setLoading(true);
             
-            // Gọi hàm đặt hàng
-            await PLACE_ORDER(email, selectedAddressId || 0, shippingFee, addrStr);
-            
-            // Chuyển hướng đến trang thành công hoặc danh sách đơn hàng
-            navigate("/orders", { replace: true });
-            alert("Đặt hàng thành công!");
+            // 1. Tạo đơn hàng trước
+            const order = await PLACE_ORDER(email, selectedAddressId || 0, shippingFee, addrStr, selectedMethod);
+            const orderId = order?.id || order?.orderId;
+
+            if (selectedMethod === "VNPAY") {
+                // 2. Nếu là VNPay, gọi API lấy URL thanh toán
+                const vnpayRes = await GET_VNPAY_URL(orderId, grandTotal);
+                if (vnpayRes?.url) {
+                    window.location.href = vnpayRes.url; // Chuyển hướng sang VNPay
+                    return;
+                } else {
+                    alert("Không thể tạo liên kết thanh toán VNPay.");
+                }
+            } else {
+                // 3. Nếu là COD, thông báo thành công và về trang đơn hàng
+                navigate("/orders", { replace: true });
+                alert("Đặt hàng thành công!");
+            }
         } catch (e) {
             console.error("Place order error:", e);
             alert("Đặt hàng thất bại. Vui lòng thử lại.");

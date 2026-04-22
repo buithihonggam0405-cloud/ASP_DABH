@@ -36,3 +36,28 @@
     transform: rotate(360deg);
   }
 }
+
+.badge-notify {
+  position: absolute;
+  top: -8px;
+  right: -2px;
+  background: #ff0000;
+  color: white;
+  font-size: 8px;
+  font-weight: 800;
+  border-radius: 50%;
+  padding: 0;
+  min-width: 13px;
+  height: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+
+.icon-area {
+  position: relative;
+  display: inline-block;
+}

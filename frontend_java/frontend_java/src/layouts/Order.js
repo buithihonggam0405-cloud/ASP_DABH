@@ -22,9 +22,10 @@ const formatDate = (s) => {
 
 // mapping mềm để không lệch field
 const getOrderId = (o) => o?.orderId ?? o?.id ?? o?.orderNumber ?? "—";
-const getOrderDate = (o) => o?.orderDate ?? o?.createdAt ?? o?.date ?? null;
+const getOrderDate = (o) => o?.createdDate ?? o?.orderDate ?? o?.createdAt ?? o?.date ?? null;
 const getOrderTotal = (o) => o?.totalAmount ?? o?.total ?? o?.orderTotal ?? o?.amount ?? 0;
 const getOrderStatus = (o) => o?.orderStatus ?? o?.status ?? "—";
+const getOrderItems = (o) => o?.orderItems || [];
 
 const Order = () => {
     const navigate = useNavigate();
@@ -66,7 +67,8 @@ const Order = () => {
             setPage(0);
         } catch (e) {
             console.error("Fetch orders error:", e);
-            setError("Không tải được lịch sử đơn hàng.");
+            const msg = e.response?.data || e.message || "Không tải được lịch sử đơn hàng.";
+            setError(typeof msg === 'string' ? msg : "Lỗi hệ thống khi tải đơn hàng.");
             setOrders([]);
         } finally {
             setLoading(false);
@@ -122,6 +124,7 @@ const Order = () => {
                                             <thead className="bg-light text-muted">
                                                 <tr>
                                                     <th>Mã đơn</th>
+                                                    <th>Sản phẩm</th>
                                                     <th>Ngày đặt</th>
                                                     <th>Trạng thái</th>
                                                     <th className="text-right">Tổng tiền</th>
@@ -132,6 +135,7 @@ const Order = () => {
                                             <tbody>
                                                 {pageOrders.map((o) => {
                                                     const id = getOrderId(o);
+                                                    const items = getOrderItems(o);
                                                     return (
                                                         <tr
                                                             key={id}
@@ -139,9 +143,28 @@ const Order = () => {
                                                             onClick={() => navigate(`/orders/${id}`)}
                                                         >
                                                             <td className="font-weight-bold">#{id}</td>
+                                                            <td>
+                                                                <div className="d-flex align-items-center">
+                                                                    {items.length > 0 ? (
+                                                                        <>
+                                                                            <span className="text-truncate" style={{maxWidth: '150px'}}>
+                                                                                {items[0].productName}
+                                                                                {items.length > 1 ? ` (+${items.length - 1} món)` : ''}
+                                                                            </span>
+                                                                        </>
+                                                                    ) : <span className="text-muted small italic">Không có dữ liệu SP</span>}
+                                                                </div>
+                                                            </td>
                                                             <td>{formatDate(getOrderDate(o))}</td>
-                                                            <td>{getOrderStatus(o)}</td>
-                                                            <td className="text-right">{formatMoney(getOrderTotal(o))}</td>
+                                                            <td>
+                                                                <span className={`badge badge-pill ${
+                                                                    getOrderStatus(o) === 'Pending' ? 'badge-warning' : 
+                                                                    getOrderStatus(o) === 'Completed' ? 'badge-success' : 'badge-light'
+                                                                }`}>
+                                                                    {getOrderStatus(o)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="text-right font-weight-bold text-primary">{formatMoney(getOrderTotal(o))}</td>
                                                             <td className="text-right">
                                                                 <Link
                                                                     to={`/orders/${id}`}

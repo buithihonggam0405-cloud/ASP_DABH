@@ -37,6 +37,7 @@ const ProductCard = ({ product, className = "col-xl-3 col-lg-3 col-md-4 col-6 mb
 
             // Sử dụng email làm sessionId cho Backend
             await ADD_TO_CART(email, productId, 1);
+            window.dispatchEvent(new Event("cartUpdated"));
             alert("Đã thêm sản phẩm vào giỏ hàng!");
         } catch (e) {
             console.error("Add to cart error:", e);

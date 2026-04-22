@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PLACE_ORDER } from "../../config/apiService";
 
-const API_BASE = "http://localhost:2005";
+const API_BASE = "http://localhost:5000/api";
 
 const PaymentReturn = () => {
     const navigate = useNavigate();
@@ -17,45 +17,22 @@ const PaymentReturn = () => {
             try {
                 setLoading(true);
 
-                // query params trả về từ VNPAY
-                const qs = location.search?.replace(/^\?/, "") || "";
-                const res = await fetch(`${API_BASE}/vnpay/verify?${qs}`);
+                // Gửi toàn bộ query về Backend để kiểm tra chữ ký VNPay
+                const qs = location.search || "";
+                const res = await fetch(`${API_BASE}/Payment/vnpay-return${qs}`);
                 const data = await res.json();
 
-                if (!data?.success) {
+                if (data.status === "Success") {
+                    setSuccess(true);
+                    setMessage("Thanh toán VNPAY thành công 🎉. Đơn hàng của bạn đã được ghi nhận!");
+                } else {
                     setSuccess(false);
-                    setMessage("Thanh toán thất bại hoặc chữ ký không hợp lệ ❌");
-                    return;
+                    setMessage(data.message || "Thanh toán thất bại hoặc chữ ký không hợp lệ ❌");
                 }
-
-                // verify ok -> place order bằng pending info đã lưu
-                const pendingRaw = localStorage.getItem("pending-vnpay-order");
-                if (!pendingRaw) {
-                    setSuccess(false);
-                    setMessage("Không tìm thấy thông tin đơn hàng chờ thanh toán.");
-                    return;
-                }
-
-                const pending = JSON.parse(pendingRaw);
-                const { email, cartId, addressId } = pending || {};
-
-                if (!email || !cartId || !addressId) {
-                    setSuccess(false);
-                    setMessage("Thiếu thông tin để tạo đơn hàng.");
-                    return;
-                }
-
-                await PLACE_ORDER(email, cartId, addressId, "VNPAY");
-
-                // clear pending
-                localStorage.removeItem("pending-vnpay-order");
-
-                setSuccess(true);
-                setMessage("Thanh toán VNPAY thành công 🎉");
             } catch (e) {
                 console.error("verify error:", e);
                 setSuccess(false);
-                setMessage("Không thể xác thực thanh toán");
+                setMessage("Không thể kết nối máy chủ để xác thực.");
             } finally {
                 setLoading(false);
             }

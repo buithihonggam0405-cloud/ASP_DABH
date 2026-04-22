@@ -10,7 +10,7 @@ import {
     settingsOutline,
 } from "ionicons/icons";
 import Navbar from "../pages/navbar/Navbar";
-import { GET_CATEGORIES, removeToken, removeEmail, getUserEmail, getToken } from "../config/apiService";
+import { GET_CATEGORIES, removeToken, removeEmail, getUserEmail, getToken, GET_CART_BY_USER_ID } from "../config/apiService";
 
 const Header = () => {
     const navigate = useNavigate();
@@ -22,6 +22,7 @@ const Header = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [email, setEmail] = useState("");
     const [categories, setCategories] = useState([]);
+    const [cartCount, setCartCount] = useState(0);
 
     // ===== search state =====
     const [searchText, setSearchText] = useState("");
@@ -33,6 +34,24 @@ const Header = () => {
         const token = getToken();
         setIsLoggedIn(!!token);
         setEmail(getUserEmail() || "");
+    };
+
+    /* ================= FETCH CART COUNT ================= */
+    const fetchCartCount = async () => {
+        const email = getUserEmail();
+        if (!email) {
+            setCartCount(0);
+            return;
+        }
+        try {
+            const res = await GET_CART_BY_USER_ID(email);
+            const items = res?.items || res?.data?.items || [];
+            const count = items.reduce((acc, item) => acc + (item.quantity || 0), 0);
+            setCartCount(count);
+        } catch (e) {
+            console.error("Lỗi lấy số lượng giỏ hàng:", e);
+            setCartCount(0);
+        }
     };
 
     /* ================= FETCH CATEGORY ================= */
@@ -52,10 +71,20 @@ const Header = () => {
     useEffect(() => {
         checkAuth();
         fetchCategories();
+        fetchCartCount();
 
-        const onStorage = () => checkAuth();
+        const onStorage = () => {
+            checkAuth();
+            fetchCartCount();
+        };
+        
         window.addEventListener("storage", onStorage);
-        return () => window.removeEventListener("storage", onStorage);
+        window.addEventListener("cartUpdated", fetchCartCount);
+
+        return () => {
+            window.removeEventListener("storage", onStorage);
+            window.removeEventListener("cartUpdated", fetchCartCount);
+        };
     }, []);
 
     /* ================= SYNC INPUT SEARCH THEO URL (tuỳ chọn) ================= */
@@ -101,7 +130,7 @@ const Header = () => {
                 <div className="container">
                     <div className="row align-items-center">
                         {/* Logo */}
-                        <div className="col-lg-3 col-sm-4 col-12">
+                        <div className="col-lg-2 col-md-2 col-12">
                             <Link to="/" className="brand-wrap">
                                 <img
                                     src={require("../asset/images/logo.png")}
@@ -112,7 +141,7 @@ const Header = () => {
                         </div>
 
                         {/* Search */}
-                        <div className="col-lg-5 col-xl-6 col-sm-8 col-12">
+                        <div className="col-lg-6 col-md-6 col-12">
                             <form className="search-header" onSubmit={handleSubmitSearch}>
                                 <div className="input-group w-100">
                                     <input
@@ -132,9 +161,9 @@ const Header = () => {
                         </div>
 
                         {/* Right icons */}
-                        <div className="col-lg-4 col-xl-3 col-12">
+                        <div className="col-lg-4 col-md-4 col-12">
                             <div className="d-flex justify-content-end align-items-center mt-3 mt-lg-0">
-                                {/* USER */}
+                                {/* USER / ACCOUNT */}
                                 {!isLoggedIn ? (
                                     <div className="widget-header mr-3">
                                         <Link to="/login" className="widget-view">
@@ -147,24 +176,29 @@ const Header = () => {
                                 ) : (
                                     <div className="widget-header mr-3 position-relative" ref={menuRef}>
                                         <button
-                                            className="widget-view btn p-0 border-0 bg-transparent"
+                                            className="widget-view btn p-0 border-0 bg-transparent d-flex flex-column align-items-center"
                                             onClick={() => setUserMenuOpen((s) => !s)}
                                             type="button"
                                         >
                                             <div className="icon-area">
                                                 <IonIcon icon={personOutline} />
                                             </div>
-                                            <small className="text">{email || "Tài khoản"}</small>
+                                            <small className="text text-truncate" style={{ maxWidth: '80px' }}>
+                                                {email.split('@')[0] || "Tài khoản"}
+                                            </small>
                                         </button>
 
                                         {userMenuOpen && (
-                                            <div className="dropdown-menu show" style={{ right: 0, left: "auto" }}>
-                                                <Link className="dropdown-item" to="/profile" onClick={() => setUserMenuOpen(false)}>
-                                                    <IonIcon icon={settingsOutline} className="mr-2" />
+                                            <div className="dropdown-menu show shadow-sm" style={{ right: 0, left: "auto", borderRadius: '8px', marginTop: '10px', minWidth: '180px' }}>
+                                                <div className="dropdown-item-text text-muted small border-bottom mb-1 pb-2">
+                                                    Xin chào, <br/><b className="text-dark">{email}</b>
+                                                </div>
+                                                <Link className="dropdown-item d-flex align-items-center py-2" to="/profile" onClick={() => setUserMenuOpen(false)}>
+                                                    <IonIcon icon={settingsOutline} className="mr-2" style={{fontSize: '1.2rem'}} />
                                                     Thông tin cá nhân
                                                 </Link>
-                                                <button className="dropdown-item text-danger" onClick={handleLogout} type="button">
-                                                    <IonIcon icon={logOutOutline} className="mr-2" />
+                                                <button className="dropdown-item text-danger d-flex align-items-center py-2" onClick={handleLogout} type="button">
+                                                    <IonIcon icon={logOutOutline} className="mr-2" style={{fontSize: '1.2rem'}} />
                                                     Đăng xuất
                                                 </button>
                                             </div>
@@ -172,18 +206,45 @@ const Header = () => {
                                     </div>
                                 )}
 
-                                {/* Orders & Cart */}
-                                <div className="widget-header mr-3">
-                                    {isLoggedIn && (
+                                {/* ORDERS (Only when logged in) */}
+                                {isLoggedIn && (
+                                    <div className="widget-header mr-3">
                                         <Link to="/orders" className="widget-view">
-                                            <IonIcon icon={receiptOutline} />
+                                            <div className="icon-area">
+                                                <IonIcon icon={receiptOutline} />
+                                            </div>
                                             <small className="text">Đơn hàng</small>
                                         </Link>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
+
+                                {/* CART */}
                                 <div className="widget-header">
                                     <Link to="/cart" className="widget-view">
-                                        <IonIcon icon={cartOutline} />
+                                        <div className="icon-area" style={{ position: 'relative', display: 'inline-block' }}>
+                                            <IonIcon icon={cartOutline} />
+                                            {cartCount > 0 && (
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    top: '-5px',
+                                                    right: '-8px',
+                                                    backgroundColor: '#ff0000',
+                                                    color: '#ffffff',
+                                                    borderRadius: '50%',
+                                                    width: '15px',
+                                                    height: '15px',
+                                                    fontSize: '9px',
+                                                    fontWeight: 'bold',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    border: '1px solid white',
+                                                    zIndex: 10
+                                                }}>
+                                                    {cartCount}
+                                                </span>
+                                            )}
+                                        </div>
                                         <small className="text">Giỏ hàng</small>
                                     </Link>
                                 </div>

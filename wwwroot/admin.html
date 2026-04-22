@@ -139,10 +139,7 @@
             <!-- ORDERS PAGE -->
             <div id="page-orders" class="hidden page-fade">
                 <div class="flex justify-between items-end mb-6">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-900">Quản lý Đơn hàng</h2>
-                        <p class="text-sm text-slate-400 font-medium">Theo dõi và cập nhật trạng thái vận chuyển</p>
-                    </div>
+                    <div></div>
                     <div class="flex gap-2">
                         <button onclick="initData()" class="bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm hover:bg-slate-50 transition-all text-slate-500"><i data-lucide="refresh-cw" class="w-5 h-5"></i></button>
                     </div>
@@ -156,6 +153,7 @@
                                 <th class="px-8 py-5">Giá trị</th>
                                 <th class="px-8 py-5">Thời gian</th>
                                 <th class="px-8 py-5 text-center">Trạng thái</th>
+                                <th class="px-8 py-5 text-center">Chi tiết</th>
                                 <th class="px-8 py-5 text-right">Thao tác</th>
                             </tr>
                         </thead>
@@ -271,6 +269,44 @@
         </div>
     </div>
 
+    <!-- Modal Order Details -->
+    <div id="modalOrderDetails" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden items-center justify-center opacity-0 transition-all duration-300">
+        <div class="bg-white w-full max-w-2xl p-10 rounded-[40px] shadow-2xl scale-95 transition-all duration-300" id="modalOrderDetailsBox">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-2xl font-black text-slate-900">Chi tiết Đơn hàng</h3>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1" id="det-orderId">#ORD-0</p>
+                </div>
+                <button onclick="closeOrderModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-slate-900 transition-all"><i data-lucide="x"></i></button>
+            </div>
+            
+            <div class="space-y-6 max-h-[60vh] overflow-y-auto pr-2 custom-scroll">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="p-4 bg-slate-50 rounded-2xl">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Khách hàng</p>
+                        <p class="font-bold text-slate-900" id="det-customer">Admin</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-2xl">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Thanh toán</p>
+                        <p class="font-bold text-blue-600" id="det-payment">COD</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Sản phẩm đã mua</p>
+                    <div id="det-items-list" class="space-y-3">
+                        <!-- Items here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
+                <div class="text-slate-400 font-bold text-xs uppercase tracking-widest">Tổng thanh toán</div>
+                <div class="text-2xl font-black text-blue-600" id="det-total">$0</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
         document.getElementById('dateStr').textContent = new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -289,13 +325,20 @@
         let isEditing = false;
 
         async function initData() {
-            const [p, u, o, c] = await Promise.all([
+            const resO = await apiFetch('/api/Orders');
+            if(!resO.ok) {
+                const err = await resO.text();
+                alert("Lỗi từ server: " + err);
+                return;
+            }
+            gOrders = await resO.json();
+
+            const [p, u, c] = await Promise.all([
                 apiFetch('/api/Products').then(r => r?.json() || []),
                 apiFetch('/api/Users').then(r => r?.json() || []),
-                apiFetch('/api/Orders').then(r => r?.json() || []),
                 apiFetch('/api/Cart').then(r => r?.json() || [])
             ]);
-            gProducts = p; gUsers = u; gOrders = o; gCarts = c;
+            gProducts = p; gUsers = u; gCarts = c;
             
             document.getElementById('kpi-products').textContent = gProducts.length;
             document.getElementById('kpi-users').textContent = gUsers.length;
@@ -337,6 +380,9 @@
                             <option value="Completed" ${o.status==='Completed'?'selected':''}>Hoàn tất</option>
                             <option value="Cancelled" ${o.status==='Cancelled'?'selected':''}>Đã hủy</option>
                         </select>
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        <button onclick='viewOrderDetails(${JSON.stringify(o).replace(/'/g, "&#39;")})' class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold text-[10px] hover:bg-blue-600 hover:text-white transition-all">Xem chi tiết</button>
                     </td>
                     <td class="px-8 py-5 text-right">
                         <button onclick="deleteOrder(${o.id})" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -476,6 +522,41 @@
             if(show) { el.classList.remove('hidden'); setTimeout(()=> { el.classList.remove('opacity-0'); box.classList.remove('scale-95'); }, 10); }
             else { el.classList.add('opacity-0'); box.classList.add('scale-95'); setTimeout(()=> el.classList.add('hidden'), 300); }
         }
+
+        function viewOrderDetails(o) {
+            document.getElementById('det-orderId').textContent = `#ORD-${o.id}`;
+            document.getElementById('det-customer').textContent = o.customerName;
+            document.getElementById('det-payment').textContent = o.paymentMethod || 'Chưa xác định';
+            document.getElementById('det-total').textContent = `$${o.totalAmount.toLocaleString()}`;
+            
+            const listHtm = (o.orderItems || []).map(i => {
+                let imgPath = i.productImage || 'https://via.placeholder.com/100';
+                
+                if (i.productImage && !i.productImage.startsWith('http')) {
+                    // Đảm bảo luôn có tiền tố /uploads/ và trỏ về port 5000
+                    const fileName = i.productImage.split('/').pop();
+                    imgPath = `http://localhost:5000/uploads/${fileName}`;
+                }
+
+                return `
+                    <div class="flex items-center gap-4 p-4 rounded-3xl border border-slate-100 hover:border-blue-100 transition-all">
+                        <img src="${imgPath}" class="w-16 h-16 rounded-2xl object-cover shadow-sm bg-slate-50" onerror="this.src='https://via.placeholder.com/100'">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-slate-900">${i.productName}</h4>
+                            <p class="text-xs text-slate-400 font-medium">$${i.price.toLocaleString()} x ${i.quantity}</p>
+                        </div>
+                        <div class="text-sm font-black text-slate-900">$${(i.price * i.quantity).toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('det-items-list').innerHTML = listHtm || '<p class="text-center text-slate-300 italic py-4">Không có dữ liệu sản phẩm...</p>';
+            
+            toggleModal('modalOrderDetails', true);
+            lucide.createIcons();
+        }
+
+        function closeOrderModal() { toggleModal('modalOrderDetails', false); }
 
         initData();
     </script>
