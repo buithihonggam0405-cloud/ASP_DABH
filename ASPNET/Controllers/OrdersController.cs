@@ -17,9 +17,21 @@ namespace ASPNET.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
+        public async Task<ActionResult> GetOrders()
         {
-            return await _context.Orders.OrderByDescending(o => o.CreatedDate).ToListAsync();
+            try
+            {
+                var orders = await _context.Orders.OrderByDescending(o => o.CreatedDate).ToListAsync();
+                foreach (var order in orders)
+                {
+                    order.OrderItems = await _context.OrderItems.Where(x => x.OrderId == order.Id).ToListAsync();
+                }
+                return Ok(orders);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Lỗi Database: " + ex.Message);
+            }
         }
 
         [HttpPut("{id}/status")]
@@ -65,8 +77,22 @@ namespace ASPNET.Controllers
                 Address = request.FullAddress,
                 TotalAmount = totalAmount,
                 Status = "Pending",
-                CreatedDate = DateTime.Now
+                PaymentMethod = request.PaymentMethod,
+                CreatedDate = DateTime.Now,
+                OrderItems = new List<OrderItem>()
             };
+
+            foreach (var item in cart.Items)
+            {
+                order.OrderItems.Add(new OrderItem
+                {
+                    ProductId = item.ProductId,
+                    ProductName = item.Product?.Name ?? "Unknown",
+                    ProductImage = item.Product?.ImageUrl ?? "",
+                    Price = (decimal)(item.Product?.Price ?? 0),
+                    Quantity = item.Quantity
+                });
+            }
 
             _context.Orders.Add(order);
             _context.CartItems.RemoveRange(cart.Items);
@@ -82,5 +108,6 @@ namespace ASPNET.Controllers
         public int AddressId { get; set; }
         public string FullAddress { get; set; } = string.Empty;
         public decimal ShippingFee { get; set; }
+        public string PaymentMethod { get; set; } = "COD";
     }
 }
